@@ -140,7 +140,7 @@ async def process_instagram_link(event, message: str, status_message):
                     await asyncio.sleep(2)
                 else:  # اگر تلاش دوم بود
                     await status_message.edit("❌ مشکل در پردازش. لطفا بعداً تلاش کنید.")
-                        return
+                        
                 
                 # ایجاد تسک‌های همزمان برای دانلود و آپلود
                 tasks = []
