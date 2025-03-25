@@ -91,17 +91,55 @@ async def process_instagram_link(event, message: str, status_message):
     async with httpx.AsyncClient(timeout=60.0) as http_client:
         for attempt in range(2):  # دو بار تلاش
             try:
-                api_url = f"https://دامین‌خوشگلت/insta.php?url={message}"
+                # استفاده از API جدید
+                api_url = f"https://insta-donn.onrender.com/ehsan?url={message}"
                 response = await http_client.get(api_url)
+                
+                # بررسی وضعیت پاسخ
+                if response.status_code != 200:
+                    await status_message.edit("❌ خطا در دریافت اطلاعات از API.")
+                    return
+                
                 data = response.json()
                 
-                if not data or data == []:
+                # بررسی اینکه داده‌ها حاوی لینک ویدیو باشند
+                if not data or not isinstance(data.get("data"), list):
                     if attempt == 0:  # اگر تلاش اول ناموفق بود
                         await status_message.edit("تلاش مجدد...")
                         await asyncio.sleep(2)  # کمی صبر قبل از تلاش مجدد
                         continue
                     else:  # اگر تلاش دوم هم ناموفق بود
                         await status_message.edit("❌ دریافت اطلاعات از API ناموفق بود.")
+                        return
+
+                # دریافت لینک ویدیو از داده‌های API
+                media_url = data["data"][0]["media"]
+                media_type = data["data"][0]["type"]
+                file_extension = '.mp4' if media_type == "video" else '.jpg'
+                
+                # دانلود و ارسال فایل
+                await download_and_upload_file(
+                    media_url,
+                    http_client,
+                    event,
+                    status_message,
+                    file_extension,
+                    1,  # چون فقط یک فایل داریم
+                    1   # تعداد فایل‌ها 1 است
+                )
+
+                await status_message.edit("✅ عملیات با موفقیت انجام شد!")
+                await asyncio.sleep(3)
+                await status_message.delete()
+                return  # خروج از تابع در صورت موفقیت
+
+            except Exception as e:
+                print(f"خطا در پردازش لینک (تلاش {attempt + 1}): {e}")
+                if attempt == 0:  # اگر تلاش اول بود
+                    await status_message.edit("❌ مشکل در پردازش. در حال تلاش مجدد...")
+                    await asyncio.sleep(2)
+                else:  # اگر تلاش دوم بود
+                    await status_message.edit("❌ مشکل در پردازش. لطفا بعداً تلاش کنید.")
                         return
                 
                 # ایجاد تسک‌های همزمان برای دانلود و آپلود
